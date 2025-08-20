@@ -16,7 +16,7 @@ This repository serves as a practical, working example of agent interoperability
 
 ## 🏗️ Architecture
 
-The system is designed with a client-server architecture where the ADK agent acts as the orchestrator and the LangChain agent acts as a specialized, callable tool.
+The system is designed with a client-server architecture where the ADK agent acts as the orchestrator and the LangChain agent acts as a specialized, callable tool. The ADK agent discovers the LangChain agent by fetching its public **Agent Card**.
 
 
 
@@ -28,6 +28,9 @@ sequenceDiagram
     participant LangChain Specialist (A2A Server)
     participant Frankfurter API
 
+    ADK Orchestrator->>LangChain Specialist (A2A Server): GET /.well-known/agent.json (Discovery)
+    LangChain Specialist (A2A Server)-->>ADK Orchestrator: Returns Agent Card (JSON)
+
     User->>ADK Orchestrator: "Hello! How much is 100 USD in CAD?"
     
     ADK Orchestrator->>Greeting Sub-Agent: Delegates "Hello!"
@@ -35,7 +38,7 @@ sequenceDiagram
     
     ADK Orchestrator-->>User: "Hello there! How can I help you today?"
 
-    Note over ADK Orchestrator: Processes next part of query. <br/> Decides to use A2A tool.
+    Note over ADK Orchestrator: Reads Agent Card to know <br/> Specialist's URL and Skills. <br/> Decides to use A2A tool.
     
     ADK Orchestrator->>LangChain Specialist (A2A Server): A2A Request: "How much is 100 USD in CAD?"
     
@@ -48,6 +51,58 @@ sequenceDiagram
 
 ```
 ---
+
+## 🔍 Agent Discovery: The Agent Card (`agent.json`)
+
+[cite_start]The A2A protocol enables one agent to **discover and search for the functionalities** of another agent through a public JSON manifest called an **Agent Card**[cite: 7040, 4762]. [cite_start]This file acts as a "digital business card" for the agent[cite: 1656, 4834, 5167].
+
+[cite_start]When the ADK Orchestrator's client tool wants to connect to the LangChain Specialist, it first fetches the Agent Card from the standard URL: `http://localhost:10000/.well-known/agent.json`[cite: 1657, 4834, 7040].
+
+From this file, the orchestrator learns everything it needs to know:
+-   [cite_start]**`name`** and **`description`**: What the agent is and what it does[cite: 1662, 5904].
+-   [cite_start]**`url`**: The specific endpoint where it should send A2A requests[cite: 1664, 5904].
+-   [cite_start]**`capabilities`**: Whether advanced features like `"streaming":true` are supported[cite: 1666, 5904].
+-   **`skills`**: A detailed list of the agent's functionalities. [cite_start]The orchestrator's LLM can read this to understand that the specialist has a tool with the id `"convert_currency"` for handling exchange rates[cite: 1615, 5904].
+
+### Example `agent.json` for the LangChain Specialist Agent:
+
+```json
+{
+  "capabilities": {
+    "pushNotifications": false,
+    "streaming": true
+  },
+  "defaultInputModes": [
+    "text/plain"
+  ],
+  "defaultOutputModes": [
+    "text/plain"
+  ],
+  "description": "Helps with real-time exchange rates for currencies.",
+  "name": "Currency Specialist Agent (LangChain)",
+  "preferredTransport": "JSONRPC",
+  "protocolVersion": "0.3.0",
+  "skills": [
+    {
+      "description": "Helps with exchange values between various currencies.",
+      "examples": [
+        "What is the exchange rate between USD and GBP?"
+      ],
+      "id": "convert_currency",
+      "name": "Currency Exchange Rates Tool",
+      "tags": [
+        "currency conversion",
+        "currency exchange"
+      ]
+    }
+  ],
+  "url": "http://localhost:10000/",
+  "version": "1.0.0"
+}
+```
+
+---
+
 ## 📂 File Structure
 
 The repository is organized into four key files:
@@ -65,7 +120,7 @@ Follow these steps to get the project running.
 
 ### Requirements
 * Python 3.12+
-* A **Google API Key** for the Gemini model. You can get a key from [Google AI Studio](https://a2aprotocol.ai/docs/guide/google-a2a-python-sdk-tutorial).
+* A **Google API Key** for the Gemini model. You can get a key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 
 ### Setup and Installation
 
